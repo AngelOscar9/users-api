@@ -12,7 +12,7 @@ export class LoggerService {
         },
       },
       base: undefined,
-    }).child({ context });
+    });
   }
 
   info(message, data = {}) {
