@@ -1,4 +1,7 @@
 import User from './model.js';
+import { LoggerService } from '../../config/logger.js';
+
+const logger = new LoggerService('UsersController');
 
 export const listUsers = async (req, res) => {
     try {
@@ -6,7 +9,7 @@ export const listUsers = async (req, res) => {
 
         res.status(200).json(users)
     } catch (error) {
-        console.error('listUsers() -> unknown', { error })
+        logger.error('listUsers() -> unknown', { error })
         res.status(500).json({ error: 'Internal Server Error' })
     }
 }
@@ -22,7 +25,7 @@ export const getUser = async (req, res) => {
 
         return res.status(200).json(user)
     } catch (error) {
-        console.error('listUsers() -> unknown', { error })
+        logger.error('listUsers() -> unknown', { error })
         res.status(500).json({ error: 'Internal Server Error' })
     }
 }
@@ -40,7 +43,7 @@ export const createUser = async (req, res) => {
 
         return res.status(201).json(user)
     } catch (error) {
-        console.error('listUsers() -> unknown', { error })
+        logger.error('listUsers() -> unknown', { error })
         res.status(500).json({ error: 'Internal Server Error' })
     }
 }
