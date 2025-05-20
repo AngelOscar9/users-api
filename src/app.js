@@ -31,4 +31,13 @@ app.use(
   }),
 );
 
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Invalid JSON payload',
+      });
+    }
+    next(err);
+  });
 export default app;
