@@ -21,12 +21,11 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 COPY . .
 
-RUN groupadd --gid 1001 appgroup \        # <<<
- && useradd  --uid 1001 --gid appgroup \
+RUN groupadd --gid 1001 appgroup && \
+    useradd  --uid 1001 --gid appgroup \
              --shell /usr/sbin/nologin \
-             --create-home appuser        # <<< crea /home/appuser
-
-RUN chown -R appuser:appgroup /opt/app    # <<<
+             --create-home appuser && \
+    chown -R appuser:appgroup /opt/app
 
 EXPOSE ${PORT}
 
