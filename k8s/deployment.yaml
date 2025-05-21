@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-api
+  template:
+    metadata:
+      labels:
+        app: user-api
+    spec:
+      containers:
+        - name: user-api
+          image: ${DOCKER_REGISTRY}/user-api:${TAG}	
+          ports:
+            - containerPort: ${CONTAINER_PORT}
+          envFrom:
+            - configMapRef:
+                name: user-api-config
+            - secretRef:
+                name: user-api-secret
