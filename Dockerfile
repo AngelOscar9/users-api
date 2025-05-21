@@ -23,7 +23,7 @@ RUN npm ci --omit=dev
 
 COPY . .
 
-RUN addgroup appgroup && adduser -S appuser -G appgroup
+RUN addgroup -S appgroup && adduser -S -G appgroup appuser
 
 EXPOSE ${PORT}
 
