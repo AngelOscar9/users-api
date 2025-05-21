@@ -1,0 +1,113 @@
+stages:
+  - build
+  - test
+  - analyze
+  - coverage
+  - docker
+  - scan
+  - deploy
+
+variables:
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+  DOCKER_REGISTRY: "$CI_REGISTRY_IMAGE"
+  TAG: "$CI_COMMIT_SHORT_SHA"
+  PORT: "7055"
+  CONTAINER_PORT: "7055"
+
+default:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      when: always
+    - when: never
+
+before_script:
+  - echo "$KUBE_CONFIG" > kubeconfig
+  - export KUBECONFIG=$CI_PROJECT_DIR/kubeconfig
+  - mkdir -p ~/.kube && cp kubeconfig ~/.kube/config
+
+build:
+  stage: build
+  image: node:20
+  script:
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+
+
+unit_test:
+  stage: test
+  image: node:20
+  script:
+    - npm test -- --coverage
+  artifacts:
+    paths:
+      - coverage/
+
+
+lint:
+  stage: analyze
+  image: node:20
+  script:
+    - npm ci
+    - npx eslint . --ext .ts,.js
+
+coverage:
+  stage: coverage
+  image: node:20
+  script:
+    - npm ci
+    - npm test -- --coverage
+    - cat coverage/lcov.info
+  artifacts:
+    paths:
+      - coverage/
+
+docker_build_push:
+  stage: docker
+  image: docker:latest
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker build \
+        --build-arg BASE_URL=$BASE_URL \
+        --build-arg USERNAME=$API_USERNAME \
+        --build-arg PASSWORD=$API_PASSWORD \
+        --build-arg PORT=$PORT \
+        --build-arg NODE_ENV=$NODE_ENV \
+        --build-arg SWAGGER_USERNAME=$SWAGGER_USERNAME \
+        --build-arg SWAGGER_PASSWORD=$SWAGGER_PASSWORD \
+        -t "$IMAGE_TAG" .
+    - docker push "$IMAGE_TAG"
+
+
+vuln_scan:
+  stage: scan
+  image: aquasec/trivy:latest
+  script:
+    - trivy image "$IMAGE_TAG"
+
+deploy_report:
+  stage: deploy
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache openssh
+    - mkdir -p ~/.ssh
+    - echo "$EC2_KEY" > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+  script:
+    - scp -r coverage "$EC2_USER@$EC2_HOST:/var/www/html/reportes/"
+
+
+deploy_k8s:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - mkdir rendered
+    - for file in k8s/*.yaml; do envsubst < "$file" > "rendered/$(basename "$file")"; done
+    - kubectl apply -f rendered/
