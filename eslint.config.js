@@ -5,6 +5,9 @@ import globals from "globals";
 
 export default defineConfig([
   {
+    ignores: ["coverage/**"],
+  },
+  {
     files: ["**/*.js"],
     languageOptions: {
       globals: {
