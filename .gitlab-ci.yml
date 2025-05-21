@@ -28,10 +28,14 @@ build:
   image: node:20
   script:
     - npm ci
-    
+
 unit_test:
   stage: test
   image: node:20
+  variables:
+    NODE_ENV: development
+  before_script:
+    - npm ci
   script:
     - npm test -- --coverage
   artifacts:
@@ -43,13 +47,16 @@ lint:
   image: node:20
   script:
     - npm ci
-    - npx eslint . --ext .ts,.js
+    - npx eslint .
 
 coverage:
   stage: coverage
   image: node:20
-  script:
+  variables:
+    NODE_ENV: development
+  before_script:
     - npm ci
+  script:
     - npm test -- --coverage
     - cat coverage/lcov.info
   artifacts:
@@ -65,7 +72,8 @@ docker_build_push:
     DOCKER_TLS_CERTDIR: ""
   script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
-    - docker build \
+    - |
+      docker build \
         --build-arg BASE_URL=$BASE_URL \
         --build-arg USERNAME=$API_USERNAME \
         --build-arg PASSWORD=$API_PASSWORD \
