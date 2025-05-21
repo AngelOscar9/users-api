@@ -1,3 +1,7 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
 stages:
   - build
   - test
@@ -14,12 +18,6 @@ variables:
   PORT: "7055"
   CONTAINER_PORT: "7055"
 
-default:
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      when: always
-    - when: never
-
 before_script:
   - echo "$KUBE_CONFIG" > kubeconfig
   - export KUBECONFIG=$CI_PROJECT_DIR/kubeconfig
@@ -30,12 +28,7 @@ build:
   image: node:20
   script:
     - npm ci
-    - npm run build
-  artifacts:
-    paths:
-      - dist/
-
-
+    
 unit_test:
   stage: test
   image: node:20
@@ -44,7 +37,6 @@ unit_test:
   artifacts:
     paths:
       - coverage/
-
 
 lint:
   stage: analyze
@@ -84,7 +76,6 @@ docker_build_push:
         -t "$IMAGE_TAG" .
     - docker push "$IMAGE_TAG"
 
-
 vuln_scan:
   stage: scan
   image: aquasec/trivy:latest
@@ -102,7 +93,6 @@ deploy_report:
     - ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
   script:
     - scp -r coverage "$EC2_USER@$EC2_HOST:/var/www/html/reportes/"
-
 
 deploy_k8s:
   stage: deploy
