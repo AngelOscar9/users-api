@@ -1,6 +1,7 @@
 workflow:
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
+    - when: always
 
 stages:
   - build
@@ -12,9 +13,9 @@ stages:
   - deploy
 
 variables:
-  IMAGE_TAG: "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
-  DOCKER_REGISTRY: "$CI_REGISTRY_IMAGE"
   TAG: "$CI_COMMIT_SHORT_SHA"
+  IMAGE_TAG: "$CI_REGISTRY_IMAGE/user-api:$CI_COMMIT_SHORT_SHA"
+  DOCKER_REGISTRY: "$CI_REGISTRY_IMAGE"
   PORT: "7055"
   CONTAINER_PORT: "7055"
 
@@ -71,7 +72,7 @@ docker_build_push:
   variables:
     DOCKER_TLS_CERTDIR: ""
   script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" "$CI_REGISTRY" --password-stdin
     - |
       docker build \
         --build-arg BASE_URL=$BASE_URL \
@@ -81,14 +82,38 @@ docker_build_push:
         --build-arg NODE_ENV=$NODE_ENV \
         --build-arg SWAGGER_USERNAME=$SWAGGER_USERNAME \
         --build-arg SWAGGER_PASSWORD=$SWAGGER_PASSWORD \
-        -t "$IMAGE_TAG" .
-    - docker push "$IMAGE_TAG"
+        -t "$DOCKER_REGISTRY/user-api:$TAG" .
+
+    - docker push "$DOCKER_REGISTRY/user-api:$TAG"
+
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        docker tag "$DOCKER_REGISTRY/user-api:$TAG" "$DOCKER_REGISTRY/user-api:latest"
+        docker push "$DOCKER_REGISTRY/user-api:latest"
+      fi
 
 vuln_scan:
   stage: scan
-  image: aquasec/trivy:latest
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  needs: ["docker_build_push"]
   script:
-    - trivy image "$IMAGE_TAG"
+    - trivy image --scanners vuln --format json --output trivy-image-report.json "registry.gitlab.com/angelosacar9/users-api/user-api:$TAG"
+  artifacts:
+    paths:
+      - trivy-image-report.json
+
+vuln_fs_scan:
+  stage: scan
+  image:
+    name: aquasec/trivy:latest
+    entrypoint: [""]
+  script:
+    - trivy fs --format json --output trivy-fs-report.json .
+  artifacts:
+    paths:
+      - trivy-fs-report.json
 
 deploy_report:
   stage: deploy
@@ -99,13 +124,25 @@ deploy_report:
     - echo "$EC2_KEY" > ~/.ssh/id_rsa
     - chmod 600 ~/.ssh/id_rsa
     - ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+    - ssh "$EC2_USER@$EC2_HOST" "mkdir -p /var/www/html/reportes"
   script:
     - scp -r coverage "$EC2_USER@$EC2_HOST:/var/www/html/reportes/"
 
 deploy_k8s:
   stage: deploy
-  image: bitnami/kubectl:latest
+  image:
+    name: registry.gitlab.com/angelosacar9/users-api/kubectl-awscli:latest
+    entrypoint: [""]
+  variables:
+    AWS_DEFAULT_REGION: "us-east-2"
+  before_script:
+    - echo "$KUBE_CONFIG" > kubeconfig
+    - export KUBECONFIG=$CI_PROJECT_DIR/kubeconfig
+    - mkdir -p ~/.kube && cp kubeconfig ~/.kube/config
+    - mkdir -p ~/.aws && printf '[default]\naws_access_key_id=%s\naws_secret_access_key=%s\nregion=%s\n' \
+      "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" "$AWS_DEFAULT_REGION" > ~/.aws/credentials
   script:
-    - mkdir rendered
-    - for file in k8s/*.yaml; do envsubst < "$file" > "rendered/$(basename "$file")"; done
+    - export TAG=$CI_COMMIT_SHORT_SHA
+    - mkdir -p rendered
+    - for f in k8s/*.yaml; do envsubst < "$f" > "rendered/$(basename "$f")"; done
     - kubectl apply -f rendered/

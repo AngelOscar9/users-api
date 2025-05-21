@@ -18,7 +18,7 @@ ENV BASE_URL=${BASE_URL} \
 
 WORKDIR /opt/app
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install
 COPY . .
 
 RUN groupadd --gid 1001 appgroup && \
@@ -34,4 +34,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
 
 USER appuser
 
-CMD ["npm", "run", "start:prod"]
+CMD ["npm", "run", "start"]

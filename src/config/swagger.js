@@ -10,6 +10,9 @@ const options = {
     },
     servers: [
       {
+        url: 'https://devsu.aogonzalez.com/api',
+      },
+      {
         url: 'http://localhost:3000/api',
       },
     ],

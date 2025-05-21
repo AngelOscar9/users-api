@@ -14,11 +14,13 @@ spec:
     spec:
       containers:
         - name: user-api
-          image: ${DOCKER_REGISTRY}/user-api:${TAG}	
+          image: registry.gitlab.com/angelosacar9/users-api/user-api:latest
           ports:
-            - containerPort: ${CONTAINER_PORT}
+            - containerPort: 7055
           envFrom:
             - configMapRef:
                 name: user-api-config
             - secretRef:
                 name: user-api-secret
+      imagePullSecrets:
+        - name: gitlab-registry-secret

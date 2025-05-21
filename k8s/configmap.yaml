@@ -3,6 +3,6 @@ kind: ConfigMap
 metadata:
   name: user-api-config
 data:
-  BASE_URL: ${BASE_URL}
-  NODE_ENV: ${NODE_ENV}
-  PORT: ${PORT}
+  BASE_URL: "${BASE_URL}"
+  NODE_ENV: "${NODE_ENV}"
+  PORT: "${PORT}" 
