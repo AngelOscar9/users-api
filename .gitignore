@@ -127,3 +127,6 @@ dist
 
 # Env Files
 .env
+
+# Coverage
+.coverage/*
