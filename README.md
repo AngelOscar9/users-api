@@ -1,142 +1,123 @@
-# Demo Devops NodeJs
 
-This is a simple application to be used in the technical test of DevOps.
+#  🚀 Prueba Practica - Devsu
 
-## Getting Started
+## 🧾 Descripción General
 
-### Prerequisites
+Este proyecto automatiza por completo el ciclo de vida de una API desarrollada en **Node.js**, desde la construcción y pruebas automáticas, hasta el análisis de seguridad y el despliegue en producción dentro de un entorno en la nube.
 
-- Node.js 18.15.0
+Todo el flujo se apoya en herramientas modernas y prácticas recomendadas: integración y entrega continua **(CI/CD) con GitLab**, contenerización con **Docker**, despliegue en Kubernetes gestionado por **Amazon EKS**, base de datos en **Amazon RDS**, análisis de vulnerabilidades, e infraestructura definida como código (IaC) para garantizar un entorno reproducible y escalable.
 
-### Installation
+---
 
-Clone this repo.
+## 📦Tecnologías y Servicios Utilizados
 
-```bash
-git clone https://bitbucket.org/devsu/demo-devops-nodejs.git
-```
+- **Node.js** + Express
+- **GitLab CI/CD** para la automatización del pipeline
+- **Docker** para la contenerización de la aplicación
+- **Amazon EKS** para orquestación de contenedores con Kubernetes
+- **Amazon RDS** como base de datos relacional
+- **Cloudflare** para gestión DNS y seguridad
+- **Trivy** para análisis de vulnerabilidades
+- **EC2** para despliegue de reportes y artefactos
+- **Swagger** para documentación de API
 
-Install dependencies.
+---
 
-```bash
-npm i
-```
+## 🔁 Flujo de CI/CD
 
-### Database
+El pipeline está dividido en las siguientes etapas:
 
-The database is generated as a file in the main path when the project is first run, and its name is `dev.sqlite`.
+| Etapa      | Descripción                                                                   |
+|------------|-------------------------------------------------------------------------------|
+| `build`    | Instalación de dependencias                                                   |
+| `test`     | Ejecución de pruebas unitarias y generación de cobertura                      |
+| `analyze`  | Análisis estático del código con ESLint                                       |
+| `coverage` | Generación del reporte de cobertura en formato `lcov`                         |
+| `docker`   | Construcción y push de imagen Docker al GitLab Container Registry             |
+| `scan`     | Escaneo de vulnerabilidades con Trivy (imagen y sistema de archivos)          |
+| `deploy`   | Despliegue automatizado en Amazon EKS y publicación de artefactos en EC2      |
 
-Consider giving access permissions to the file for proper functioning.
 
-## Usage
+**CI/CD:** Automatizado mediante GitLab, disparado en cada `push` a la rama `main`.
 
-To run tests you can use this command.
+---
 
-```bash
-npm run test
-```
+## ☸️ Despliegue en Kubernetes (EKS)
 
-To run locally the project you can use this command.
-
-```bash
-npm run start
-```
-
-Open http://localhost:8000/api/users with your browser to see the result.
-
-### Features
-
-These services can perform,
-
-#### Create User
-
-To create a user, the endpoint **/api/users** must be consumed with the following parameters:
+La infraestructura fue provisionada con **IaC utilizando `eksctl`**, garantizando reproducibilidad y escalabilidad.
 
 ```bash
-  Method: POST
+eksctl create cluster \
+  --name dev-cluster \
+  --region us-east-1 \
+  --nodegroup-name dev-nodes \
+  --node-type t3.medium \
+  --nodes 2 \
+  --nodes-min 1 \
+  --nodes-max 3 \
+  --managed
 ```
 
-```json
-{
-    "dni": "dni",
-    "name": "name"
-}
-```
+- Se desplegaron **2 réplicas** de la aplicación
+- Uso de `envsubst` para parametrizar manifiestos de Kubernetes (variables de entorno)
+- Balanceo de carga externo mediante `LoadBalancer` e `Ingress`
+- Los manifiestos están organizados en `k8s/*.yaml`
 
-If the response is successful, the service will return an HTTP Status 200 and a message with the following structure:
+---
 
-```json
-{
-    "id": 1,
-    "dni": "dni",
-    "name": "name"
-}
-```
+## 🗄️ Base de Datos
 
-If the response is unsuccessful, we will receive status 400 and the following message:
+- **Amazon RDS** (PostgreSQL)
+- Configurada como base de datos gestionada y de alta disponibilidad
+- Conexión segura mediante variables de entorno
+- Los datos persisten fuera del contenedor
 
-```json
-{
-    "error": "error"
-}
-```
+---
 
-#### Get Users
+## 🌐 Servicios Públicos Disponibles
 
-To get all users, the endpoint **/api/users** must be consumed with the following parameters:
+- 📘 **Swagger Documentation:**  
+  https://devsu.aogonzalez.com/api/docs/
 
-```bash
-  Method: GET
-```
+- ✅ **Resultado del pipeline (CI/CD):**  
+  https://gitlab.com/angelosacar9/users-api/-/pipelines/1830345634
 
-If the response is successful, the service will return an HTTP Status 200 and a message with the following structure:
+- 📊 **Reporte de cobertura de código:**  
+  http://devsu-docs.aogonzalez.com/coverage/lcov-report/
 
-```json
-[
-    {
-        "id": 1,
-        "dni": "dni",
-        "name": "name"
-    }
-]
-```
+---
 
-#### Get User
+## 🔐 Seguridad
 
-To get an user, the endpoint **/api/users/<id>** must be consumed with the following parameters:
+- Variables sensibles (tokens, claves, contraseñas) gestionadas como `secrets` en GitLab CI
+- Usuario sin privilegios `root` en ejecución de contenedor
+- Escaneo de vulnerabilidades en:
+  - Imagen Docker
+  - Sistema de archivos del proyecto
+- Acceso restringido a servicios con autenticación (Swagger, API, EC2)
 
-```bash
-  Method: GET
-```
+---
 
-If the response is successful, the service will return an HTTP Status 200 and a message with the following structure:
+## 📁 Infraestructura como Código (IaC)
 
-```json
-{
-    "id": 1,
-    "dni": "dni",
-    "name": "name"
-}
-```
+- Cluster EKS configurado con `eksctl`
+- Despliegue en Kubernetes mediante archivos `.yaml` parametrizados
+- Pipelines de CI/CD definidos en `.gitlab-ci.yml`
+- Zero-touch deployment desde GitLab al entorno productivo
 
-If the user id does not exist, we will receive status 404 and the following message:
+---
 
-```json
-{
-    "error": "User not found: <id>"
-}
-```
+## 📌 Conclusión
 
-If the response is unsuccessful, we will receive status 400 and the following message:
+Este proyecto demuestra la capacidad de construir, analizar, asegurar, contenerizar y desplegar una aplicación backend moderna en un entorno completamente automatizado y escalable usando herramientas estándar de la industria.
 
-```json
-{
-    "errors": [
-        "error"
-    ]
-}
-```
+Todo el entorno está disponible **públicamente**, desplegado y respaldado por evidencias funcionales.
 
-## License
+---
 
-Copyright © 2023 Devsu. All rights reserved.
+## 📫 Contacto
+
+**Angel O. Gonzalez**  
+💼 Software Developer  
+📧 ao.gonzalez.nolasco@gmail.com
+🔗 [LinkedIn](https://www.linkedin.com/in/aogonzalezn)
