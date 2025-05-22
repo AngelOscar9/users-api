@@ -11,10 +11,25 @@ const logger = new LoggerService('App');
 app.use(bodyParser.json());
 app.use('/api', routes);
 
-// Swagger UI
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.set('trust proxy', true)
+app.get('/api/docs/swagger.json', (req, res) => {
+  const specWithHost = {
+    ...swaggerSpec,
+    servers: [
+      { url: `${req.protocol}://${req.get('host')}/api` }
+    ]
+  };
+  res.setHeader('Content-Type', 'application/json');
+  res.send(specWithHost);
+});
 
-// Pino logger
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(null, {
+  swaggerOptions: {
+    url: '/api/docs/swagger.json',
+  },
+  explorer: true,
+}));
+
 app.use((req, res, next) => {
   logger.info(`Incoming request: ${req.method} ${req.url}`);
   next();

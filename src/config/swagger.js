@@ -8,14 +8,6 @@ const options = {
       version: '1.0.0',
       description: 'API documentation for user management',
     },
-    servers: [
-      {
-        url: 'https://devsu.aogonzalez.com/api',
-      },
-      {
-        url: 'http://localhost:3000/api',
-      },
-    ],
   },
   apis: ['./src/modules/**/*.js'],
 };
